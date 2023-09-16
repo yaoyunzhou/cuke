@@ -235,7 +235,9 @@ def direction_vec(write_idx, read_idx):
     rvec = []
     get_iterates(write_idx, wvec)
     get_iterates(read_idx, rvec)
+    print("*******************")
     print(wvec, rvec)
+    print("*******************")
     return [x - y for x, y in zip(wvec, rvec)]
 
 
