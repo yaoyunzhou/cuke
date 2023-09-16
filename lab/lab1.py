@@ -179,19 +179,7 @@ def FindBody(loop):
         return FindBody(loop.body[0])
     else:
         return loop.body
-
-def CollectLoop(loop, vec = []):
-    if not isinstance(loop, Loop):
-        vec.append(loop)
-        return loop
-    if isinstance(loop.body[0],Loop):
-        vec.append(loop.body[0])
-        return CollectLoop(loop.body[0],vec)
-    else:
-        vec.append(loop.body)
-        return loop.body
-
-
+    
 
 def get_index(statement, is_write, write_expr=[], read_expr=[]):
     if isinstance(statement, Ndarray) or isinstance(statement, Index):
@@ -251,6 +239,20 @@ def direction_vec(write_idx, read_idx):
     return [x - y for x, y in zip(wvec, rvec)]
 
 
+def swap_matrix_columns(matrix, i, j):
+    # i, j in the range of matrix
+    if i < 0 or i >= len(matrix[0]) or j < 0 or j >= len(matrix[0]):
+        return matrix  # if it above the range, then no swap 
+
+    # create a new matrix to 
+    swapped_matrix = [row[:] for row in matrix]
+
+    # swap the i element and the j element 
+    for row in swapped_matrix:
+        row[i], row[j] = row[j], row[i]
+
+    return swapped_matrix
+
 def safety_checking(vec):
     for irow in vec:
         cnt = 0
@@ -268,19 +270,6 @@ def safety_checking(vec):
 
 
 
-def swap_matrix_columns(matrix, i, j):
-    # i, j in the range of matrix
-    if i < 0 or i >= len(matrix[0]) or j < 0 or j >= len(matrix[0]):
-        return matrix  # if it above the range, then no swap 
-
-    # create a new matrix to 
-    swapped_matrix = [row[:] for row in matrix]
-
-    # swap the i element and the j element 
-    for row in swapped_matrix:
-        row[i], row[j] = row[j], row[i]
-
-    return swapped_matrix
 
 def InterchangeLoop(ir, loop_idx=[]):
     ir_res = []
@@ -340,42 +329,30 @@ def InterchangeLoop(ir, loop_idx=[]):
             # print(d_vec[0])
             swap_vec = swap_matrix_columns(d_vec,loop_idx[0],loop_idx[1])
             interchangeable = safety_checking(swap_vec)
-        
-            # PrintCCode(loop_vec)
-            # print(check_flag)
-            # if check_flag:
-            #     # PrintCCode(ir)
-            #     pass
-            # else:
-            #     interchangeable = False
-            #     PrintCCode(ir)
-            #     # pass
-        
-    for item in ir[::-1]:
-        if type(item)==Loop:
-            print("-----------")
-            outer_loop = item
-            loop_vec.append(outer_loop)
-            body = CollectLoop(item,loop_vec)
-          
-            PrintCCode(loop_vec)
-            print("---------------")
-        # else:
-        #     pass
-            # loop_vec.append(item)
-    loop_vec[loop_idx[0]],loop_vec[loop_idx[1]] = loop_vec[loop_idx[1]],loop_vec[loop_idx[0]]
-    # PrintCCode(loop_vec)
-    loop_vec_v = []
-    loop_vec_vv = []
-    for item in loop_vec:
-        if type(item)==Loop:
-            print(1)
+            if interchangeable:
+                loops = []
+                tmp = ir_item
+                while isinstance(tmp,Loop):
+                    loops.append(tmp)
+                    tmp = tmp.body[0]
+                print(loops)
 
+                body = loops[-1].body
+                print(body)
+                tmp = loops[loop_idx[0]]
+                loops[loop_idx[0]] = loops[loop_idx[1]]
+                loops[loop_idx[1]] = tmp
+                optimized_code = loops[0]
+                for idx,item in enumerate(loops):
+                    # print(idx,item,end="==")
+                    if idx > 0:
+                        loops[idx-1].body = [item]
+                loops[-1].body = body
+                ir_res.append(optimized_code)    
+        else:
+            ir_res.append(ir_item)
+        
 
-    print(len(loop_vec))  
-    # body = inner_most_loop_pointer.body
-    # print(loop_vec)
-    # PrintCCode(loop_vec)
     # print("Please implement the pass here")
     return interchangeable, ir_res
 
@@ -387,6 +364,8 @@ if __name__ == "__main__":
     # PrintCCode(loop0_ir)
 
     optimized_loop0_ir, ir_res = InterchangeLoop(loop0_ir, [0, 1])
+    PrintCCode(ir_res)
+    print(optimized_loop0_ir)
     # PrintCCode(optimized_loop0_ir)
     # optimized_loop1_ir = InterchangeLoop(loop1_ir, [1, 2]):
     # optimized_loop2_ir = InterchangeLoop(loop2_ir, [0, 1]):
